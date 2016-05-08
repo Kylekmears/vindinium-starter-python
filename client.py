@@ -1,13 +1,60 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+
+## TODO: Board to screen
 
 import os
 import sys
 import requests
 import re
-from bot import RandomBot, SlowBot
+from bot import RandomBot, SlowBot, Bot
+import os
+import platform
+
 
 TIMEOUT=15
+
+def return_board(jsonDict):
+    board = jsonDict['game']['board']['tiles']
+    size = jsonDict['game']['board']['size'] * 2 
+    if platform.system() == 'Windows':
+        os.system('cls')
+    else:
+        os.system('clear')
+    
+    total_gold = 0
+    bank_ledger = {}
+    out_board = ''
+    seventh_line = ''
+    
+    for i in range(4):
+        total_gold += jsonDict['game']['heroes'][i]['gold']
+        bank_ledger[i] = jsonDict['game']['heroes'][i]['gold']
+
+    for j in range(4):
+        if total_gold != 0:
+            seventh_line += str(j+1) * int((bank_ledger[j]/total_gold)*20)
+        else:
+            seventh_line = '-' * 20
+        
+    meta_data = {
+        0: "     HEALTH",
+        1: "    P1: " + '*'*(jsonDict['game']['heroes'][0]['life']//5),
+        2: "    P2: " + '*'*(jsonDict['game']['heroes'][1]['life']//5),
+        3: "    P3: " + '*'*(jsonDict['game']['heroes'][2]['life']//5),
+        4: "    P4: " + '*'*(jsonDict['game']['heroes'][3]['life']//5),
+        5: '',
+        6: "     GOLD",
+        7: "    " + seventh_line
+        }
+    
+    for i in range(len(board)//size):
+        out_board += board[i*size:(i+1)*size]
+        if i < 8:
+            out_board += meta_data[i]
+        out_board += '\n'
+        
+    return(out_board + '\n')
 
 def get_new_game_state(session, server_url, key, mode='training', number_of_turns = 10):
     """Get a JSON from the server containing the current state of the game"""
@@ -24,6 +71,7 @@ def get_new_game_state(session, server_url, key, mode='training', number_of_turn
     r = session.post(server_url + api_endpoint, params, timeout=10*60)
 
     if(r.status_code == 200):
+        print(return_board(r.json()))
         return r.json()
     else:
         print("Error when creating the game")
@@ -39,6 +87,7 @@ def move(session, url, direction):
         r = session.post(url, {'dir': direction}, timeout=TIMEOUT)
 
         if(r.status_code == 200):
+            print(return_board(r.json()))
             return r.json()
         else:
             print("Error HTTP %d\n%s\n" % (r.status_code, r.text))
@@ -100,5 +149,5 @@ if __name__ == "__main__":
             server_url = "http://vindinium.org"
 
         for i in range(number_of_games):
-            start(server_url, key, mode, number_of_turns, RandomBot())
+            start(server_url, key, mode, number_of_turns, Bot()) ## Here to change Bot
             print("\nGame finished: %d/%d" % (i+1, number_of_games))

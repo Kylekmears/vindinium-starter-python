@@ -3,7 +3,20 @@ import time
 from game import Game
 
 class Bot:
-    pass
+    def move(self, state):
+        game = Game(state)
+        WASD_move = input('WASD input\n')
+        moveDict = {
+            'w':'North',
+            'a':'West',
+            's':'South',
+            'd':'East',
+            ' ':'Stay'
+            }
+        try:
+            return moveDict[WASD_move]
+        except:
+            return 'Stay'
 
 class RandomBot(Bot):
 
