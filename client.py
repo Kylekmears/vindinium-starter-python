@@ -26,31 +26,41 @@ def return_board(jsonDict):
     bank_ledger = {}
     out_board = ''
     seventh_line = ''
-    
+    hero_number = 1
+
     for i in range(4):
+        if jsonDict['game']['heroes'][i]['name'] == 'karyote': #Change this for other characters!
+            hero_number = i + 1
         total_gold += jsonDict['game']['heroes'][i]['gold']
         bank_ledger[i] = jsonDict['game']['heroes'][i]['gold']
 
+    ledger_length = 25
     for j in range(4):
         if total_gold != 0:
-            seventh_line += str(j+1) * int((bank_ledger[j]/total_gold)*20)
+            seventh_line += str(j+1) * int((bank_ledger[j]/total_gold)*ledger_length)
         else:
-            seventh_line = '-' * 20
+            seventh_line = '-' * ledger_length
         
+    health_divisor = 4
     meta_data = {
         0: "     HEALTH",
-        1: "    P1: " + '*'*(jsonDict['game']['heroes'][0]['life']//5),
-        2: "    P2: " + '*'*(jsonDict['game']['heroes'][1]['life']//5),
-        3: "    P3: " + '*'*(jsonDict['game']['heroes'][2]['life']//5),
-        4: "    P4: " + '*'*(jsonDict['game']['heroes'][3]['life']//5),
+        1: "    P1: " + '+'*(jsonDict['game']['heroes'][0]['life']//health_divisor) +
+((100//health_divisor-(jsonDict['game']['heroes'][0]['life']//health_divisor))-1)*' '+'|',
+        2: "    P2: " + '+'*(jsonDict['game']['heroes'][1]['life']//health_divisor) + 
+((100//health_divisor-(jsonDict['game']['heroes'][1]['life']//health_divisor))-1)*' '+'|',
+        3: "    P3: " + '+'*(jsonDict['game']['heroes'][2]['life']//health_divisor) + 
+((100//health_divisor-(jsonDict['game']['heroes'][2]['life']//health_divisor))-1)*' '+'|',
+        4: "    P4: " + '+'*(jsonDict['game']['heroes'][3]['life']//health_divisor) +
+((100//health_divisor-(jsonDict['game']['heroes'][3]['life']//health_divisor))-1)*' '+'|',
         5: '',
         6: "     GOLD",
-        7: "    " + seventh_line
+        7: "    " + seventh_line,
+        8: "    Hero #" + str(hero_number)
         }
     
     for i in range(len(board)//size):
         out_board += board[i*size:(i+1)*size]
-        if i < 8:
+        if i < 9:
             out_board += meta_data[i]
         out_board += '\n'
         
