@@ -1,4 +1,4 @@
-Note on changes I, Kyle, have made: Running client.py will create a command line interactive mode in which Vindinium can be played.  Moves, gamestates, wins and losses are tracked.  Students and bot enthusiasts can then use supervised learning methods to train a bot to play like them.
+Note on changes I've made: Running client.py will create a command line interactive mode in which Vindinium can be played.  Moves, game states, wins and losses are tracked.  Students and bot enthusiasts can then use supervised learning methods to train a bot to play like them.
 
 ![Alt text](https://github.com/Kylekmears/vindinium-starter-python/blob/master/vindiniumInterface.png "Interface Example")
 
