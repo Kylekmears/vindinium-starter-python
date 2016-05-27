@@ -2,7 +2,7 @@ Note on changes I've made: Running client.py will create a command line interact
 
 ![Alt text](https://github.com/Kylekmears/vindinium-starter-python/blob/master/vindiniumInterface.png "Interface Example")
 
-Should work with python2 and python3.
+Works on python3.  Untested on python2.
 
 Install deps:
 
