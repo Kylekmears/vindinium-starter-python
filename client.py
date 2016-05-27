@@ -1,6 +1,7 @@
+#bears
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
+#key = cprcknq6
 ## TODO: Board to screen
 
 import os
@@ -8,15 +9,18 @@ import sys
 import requests
 import re
 from bot import RandomBot, SlowBot, Bot
-import os
+import multiprocessing
 import platform
+import math
 
 
 TIMEOUT=15
 
 def return_board(jsonDict):
+    '''Returns Viewing Board'''
     board = jsonDict['game']['board']['tiles']
-    size = jsonDict['game']['board']['size'] * 2 
+    size = jsonDict['game']['board']['size'] * 2
+
     if platform.system() == 'Windows':
         os.system('cls')
     else:
@@ -27,9 +31,9 @@ def return_board(jsonDict):
     out_board = ''
     seventh_line = ''
     hero_number = 1
-
+    
     for i in range(4):
-        if jsonDict['game']['heroes'][i]['name'] == 'karyote': #Change this for other characters!
+        if jsonDict['game']['heroes'][i]['name'] == 'Wazals': #Change this for other characters!
             hero_number = i + 1
         total_gold += jsonDict['game']['heroes'][i]['gold']
         bank_ledger[i] = jsonDict['game']['heroes'][i]['gold']
@@ -66,6 +70,86 @@ def return_board(jsonDict):
         
     return(out_board + '\n')
 
+def mapLists(jsonDict):
+    '''Returns a list that can be used to train a decision tree'''
+    board = jsonDict['game']['board']['tiles']
+    size = jsonDict['game']['board']['size'] * 2
+
+    lineList = splitBoard(board, size/2)
+    for x in range(len(lineList)):
+        newLine = splitBoard(lineList[x], 2)
+        lineList[x] = newLine
+        
+    newList = []
+    for i in range(len(lineList)):
+        for e in lineList[i]:
+            if e == '##':
+                newList.append(0)
+            elif e == '  ':
+                newList.append(1)
+            elif e == '[]':
+                newList.append(2)
+            elif e == '@1':
+                newList.append(3)
+            elif e == '@2':
+                newList.append(4)
+            elif e == '@3':
+                newList.append(5)
+            elif e == '@4':
+                newList.append(6)
+            elif e == '$-':
+                newList.append(7)
+            elif e == '$1':
+                newList.append(8)
+            elif e == '$2':
+                newList.append(9)
+            elif e == '$3':
+                newList.append(10)
+            elif e == '$4':
+                newList.append(11)
+    newList = splitBoard(newList, size/2)
+
+    
+    for i in range(4):
+        if jsonDict['game']['heroes'][i]['name'] == jsonDict['hero']['name']:
+            hero_number = i + 1
+        row = jsonDict['game']['heroes'][i]['pos']['x']
+        col = jsonDict['game']['heroes'][i]['pos']['y']
+    otherIds = [1,2,3,4]
+    otherIds.remove(hero_number)
+
+    outList = view(newList, row, col)
+    outList += [jsonDict['hero']['life'], jsonDict['hero']['gold'],
+                   jsonDict['hero']['mineCount'], jsonDict['hero']['elo']]
+    for i in otherIds:
+        outList += [jsonDict['game']['heroes'][i - 1]['life'], jsonDict['game']['heroes'][i - 1]['gold'],
+                    jsonDict['game']['heroes'][i - 1]['mineCount'], jsonDict['game']['heroes'][i - 1]['pos']]
+    #######!!!!! append to outList the things you want the model to use, like your gold, life and enemy's gold and life
+    writenFile = open("vindiniumRecords.txt",'a')
+    writenFile.write(str(outList))
+    writenFile.close()
+
+def splitBoard(line, splitNumber):
+    splitNum = int(splitNumber)
+    nulst = []
+    for i in range(int(math.ceil(len(line)/splitNum))):
+        #nulst + slice = funTimes!!!!
+        eh = i + 1
+        nulst.append(line[splitNum*i: splitNum*eh])
+    return nulst
+
+def view(board, row, col):
+    lst = []
+    for row in range(row - 2, row + 2):
+        for col in range(col - 2, col + 2):
+            if row < 0 or col < 0:
+                lst.append(0)
+            elif col > len(board[0]) - 1 or row > len(board) - 1:
+                lst.append(0)
+            else:
+                lst.append(board[row][col])
+    return lst
+
 def get_new_game_state(session, server_url, key, mode='training', number_of_turns = 10):
     """Get a JSON from the server containing the current state of the game"""
 
@@ -98,6 +182,8 @@ def move(session, url, direction):
 
         if(r.status_code == 200):
             print(return_board(r.json()))
+            mapLists(r.json())
+            ####### WRITE DIRECTION TO OUTPUT TOO, TO TRAIN THE BURNINATOR, BURNINATING YOUR INTERNETS (LOOK UP TROGDOR VIDEO)
             return r.json()
         else:
             print("Error HTTP %d\n%s\n" % (r.status_code, r.text))
@@ -110,6 +196,18 @@ def move(session, url, direction):
 def is_finished(state):
     return state['game']['finished']
 
+def winner(jsonDict):
+    '''determines if you are winner, given jsonDict'''
+    most_gold = 0
+    for hero in jsonDict['game']['heroes']:
+        if hero['gold'] > most_gold:
+            most_gold = hero['gold']
+    if most_gold == 0:
+        return False
+    elif most_gold <= jsonDict['hero']['gold']:
+        return True
+    return False
+
 def start(server_url, key, mode, turns, bot):
     """Starts a game with all the required parameters"""
 
@@ -117,7 +215,7 @@ def start(server_url, key, mode, turns, bot):
     session = requests.session()
 
     if(mode=='arena'):
-        print(u'Connected and waiting for other players to join…')
+        print(u'Connected and waiting for other players to join...')
     # Get the initial state
     state = get_new_game_state(session, server_url, key, mode, turns)
     print("Playing at: " + state['viewUrl'])
@@ -134,11 +232,23 @@ def start(server_url, key, mode, turns, bot):
         url = state['playUrl']
         state = move(session, url, direction)
 
+    # Append win or loss to record
+    print('view URL:', state['viewUrl'])
+    outFile = open('vindiniumRecords.txt','a')
+    if winner(state):
+        victory = '_V_'
+    else:
+        victory = '_F_'
+    outFile.write(victory)
+    outFile.close()
+    
     # Clean up the session
     session.close()
 
 
 if __name__ == "__main__":
+    outFile = open('vindiniumRecords.txt','a')
+    outFile.write('\n')
     if (len(sys.argv) < 4):
         print("Usage: %s <key> <[training|arena]> <number-of-games|number-of-turns> [server-url]" % (sys.argv[0]))
         print('Example: %s mySecretKey training 20' % (sys.argv[0]))
